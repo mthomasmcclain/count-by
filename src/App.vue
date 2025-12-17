@@ -240,9 +240,9 @@ button {
   padding: 10px;
   border-radius: 5px;
   font-family: monospace;
-  font-size: 0.8rem;
+  font-size: 18px;
   width: 500px;
-  max-height: 300px;
+  height: calc(100vh - 140px);
   overflow: auto;
   white-space: pre-wrap;
   text-align: left;
