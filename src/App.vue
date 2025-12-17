@@ -17,7 +17,7 @@
     <h1>Count By {{ step }}</h1>
 
     <div class="problem-line">
-      <template v-for="(item, index) in runstate.activeQuestion.items" :key="index">
+      <template v-for="(item, index) in runstate.activeQuestion.numberBoxes" :key="index">
         <NumberInput
           v-model="item.userInput"
           :locked="runstate.questionLocked || !item.missing"
@@ -26,7 +26,7 @@
                     ? (Number(item.userInput) === item.value ? 'correct-input' : 'incorrect-input')
                     : ''"
         />
-        <span v-if="index !== runstate.activeQuestion.items.length - 1" class="comma">,</span>
+        <span v-if="index !== runstate.activeQuestion.numberBoxes.length - 1" class="comma">,</span>
       </template>
     </div>
 
@@ -39,14 +39,15 @@
 
     <div v-if="showStateButton" class="state-toggle" @click="showState = !showState">State</div>
     <pre v-if="showState" class="state-display">
-step: {{ step }}
-min: {{ min }}
-max: {{ max }}
-sequenceLength: {{ sequenceLength }}
-missingCount: {{ missingCount }}
-numQuestions: {{ numQuestions }}
+parameters:
+  step: {{ step }}
+  min: {{ min }}
+  max: {{ max }}
+  sequenceLength: {{ sequenceLength }}
+  missingCount: {{ missingCount }}
+  numQuestions: {{ numQuestions }}
 
-{{ runstate }}
+user run state: {{ runstate }}
     </pre>
   </div>
 </template>
@@ -129,7 +130,7 @@ function nextQuestion() {
 function handleButtonClick() {
   if (!runstate.questionLocked) {
     runstate.questionLocked = true
-    const allCorrect = runstate.activeQuestion.items.every(item => !item.missing || Number(item.userInput) === item.value)
+    const allCorrect = runstate.activeQuestion.numberBoxes.every(item => !item.missing || Number(item.userInput) === item.value)
     runstate.correctnessLog[runstate.currentQuestionIndex] = allCorrect
     if (allCorrect) playCorrectSound()
     else playIncorrectSound()

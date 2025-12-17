@@ -18,13 +18,13 @@ export default function randomQuestion(step, min, max, n=5, missingCount=2) {
 	}
 
 	// Build question data
-	const items = sequence.map((value, i) => ({
+	const numberBoxes = sequence.map((value, i) => ({
 		value,
 		missing: missingIndices.includes(i),
 		userInput: missingIndices.includes(i) ? '' : value // locked numbers get prefilled
 	}))
 
-	return { items }
+	return { numberBoxes }
 }
 
 
