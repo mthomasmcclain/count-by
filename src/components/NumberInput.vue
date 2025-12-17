@@ -5,6 +5,7 @@
     :value="modelValue"
     :disabled="locked"
     :style="{ width: width }"
+    :class="status"
     @input="$emit('update:modelValue', $event.target.value)"
   />
 </template>
@@ -24,6 +25,10 @@ defineProps({
   locked: {
     type: Boolean,
     default: false
+  },
+  status: {
+    type: String,
+    default: ''
   }
 })
 
@@ -56,4 +61,7 @@ defineEmits(['update:modelValue'])
   -moz-appearance: textfield;
 }
 
+/* Status-based colors */
+.number-input.correct-input { background-color: #c8facc; }   /* light green */
+.number-input.incorrect-input { background-color: #ffc8c8; } /* light pink */
 </style>

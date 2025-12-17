@@ -9,6 +9,7 @@
           'fa-question-circle': val === undefined,
           'fa-circle-check': val === true,
           'fa-minus-circle': val === false,
+          'active-question-icon': val === undefined && i === currentQuestionIndex
         }"
       />
     </div>
@@ -19,19 +20,21 @@
       <template v-for="(item, index) in activeQuestion.items" :key="index">
         <NumberInput
           v-model="item.userInput"
-          :locked="!item.missing"
+          :locked="questionLocked || !item.missing"
           width="120px"
+          :status="questionLocked && item.missing
+                    ? (Number(item.userInput) === item.value ? 'correct-input' : 'incorrect-input')
+                    : ''"
         />
-        <span v-if="index !== activeQuestion.items.length - 1" 
-              class="comma">,</span>
+        <span v-if="index !== activeQuestion.items.length - 1" class="comma">,</span>
       </template>
     </div>
 
     <button
-      :class="allAnswered ? 'reset-btn' : 'submit-btn'"
-      @click="allAnswered ? resetQuiz() : checkAnswer()"
+      :class="buttonClass"
+      @click="handleButtonClick"
     >
-      {{ allAnswered ? 'Reset' : 'Submit' }}
+      {{ buttonLabel }}
     </button>
   </div>
 </template>
@@ -40,6 +43,15 @@
 import { ref, onBeforeMount, computed } from 'vue'
 import NumberInput from './components/NumberInput.vue'
 import randomQuestion from './randomQuestion.js'
+
+const DEFAULTS = {
+  step: 6,
+  min: 1,
+  max: 100,
+  sequenceLength: 6,
+  missingCount: 3,
+  numQuestions: 5
+}
 
 const step = ref()
 const min = ref()
@@ -51,14 +63,20 @@ const currentQuestionIndex = ref(0)
 const activeQuestion = ref()
 const correctnessLog = ref([])
 
-const DEFAULTS = {
-  step: 6,
-  min: 1,
-  max: 100,
-  sequenceLength: 6,
-  missingCount: 3,
-  numQuestions: 5
-}
+const questionLocked = ref(false)
+const isCompleted = ref(false)
+
+const buttonLabel = computed(() => {
+  if (!questionLocked.value) return 'Submit'
+  if (questionLocked.value && !isCompleted.value) return 'Next'
+  return 'Reset'
+})
+
+const buttonClass = computed(() => {
+  if (!questionLocked.value) return 'submit-btn'
+  if (questionLocked.value && !isCompleted.value) return 'next-btn'
+  return 'reset-btn'
+})
 
 function parseParam(params, key, defaultValue, minAllowed) {
   const val = params.get(key)
@@ -81,9 +99,59 @@ function generateQuestion() {
   )
 }
 
+function playCorrectSound() {
+  const audio = new Audio('/correct.mp3')
+  audio.volume = 0.5
+  audio.play().catch(err => console.warn('Correct sound blocked:', err))
+}
+
+function playIncorrectSound() {
+  const audio = new Audio('/incorrect.mp3')
+  audio.volume = 0.5
+  audio.play().catch(err => console.warn('Incorrect sound blocked:', err))
+}
+
+function resetAll() {
+  correctnessLog.value = new Array(numQuestions.value).fill(undefined)
+  currentQuestionIndex.value = 0
+  activeQuestion.value = generateQuestion()
+  questionLocked.value = false
+  isCompleted.value = false
+}
+
+function nextQuestion() {
+  currentQuestionIndex.value++
+  if (currentQuestionIndex.value < numQuestions.value) {
+    activeQuestion.value = generateQuestion()
+    questionLocked.value = false
+  } else {
+    isCompleted.value = true
+  }
+}
+
+function handleButtonClick() {
+  if (!questionLocked.value) {
+    questionLocked.value = true
+    const allCorrect = activeQuestion.value.items.every(item => {
+      return !item.missing || Number(item.userInput) === item.value
+    })
+    correctnessLog.value[currentQuestionIndex.value] = allCorrect
+
+    if (allCorrect) {
+      playCorrectSound()
+    } else {
+      playIncorrectSound()
+    }
+
+  } else if (!isCompleted.value) {
+    nextQuestion()
+  } else {
+    resetAll()
+  }
+}
+
 onBeforeMount(() => {
   const params = new URLSearchParams(window.location.search)
-
   step.value = parseParam(params, 'countBy', DEFAULTS.step, 1)
   min.value = parseParam(params, 'min', DEFAULTS.min)
   max.value = parseParam(params, 'max', DEFAULTS.max, min.value)
@@ -91,35 +159,8 @@ onBeforeMount(() => {
   missingCount.value = parseParam(params, 'missingCount', DEFAULTS.missingCount)
   numQuestions.value = parseParam(params, 'numQuestions', DEFAULTS.numQuestions)
 
-  // Initialize correctness log: undefined = not answered yet
-  correctnessLog.value = new Array(numQuestions.value).fill(undefined)
-  currentQuestionIndex.value = 0
-  activeQuestion.value = generateQuestion()
+  resetAll()
 })
-
-const allAnswered = computed(() => correctnessLog.value.every(v => v !== undefined))
-
-function checkAnswer() {
-  const allCorrect = activeQuestion.value.items.every(item => {
-    return !item.missing || Number(item.userInput) === item.value
-  })
-
-  correctnessLog.value[currentQuestionIndex.value] = allCorrect
-  alert(allCorrect ? '✅ Correct!' : '❌ Some answers are wrong. Try again!')
-
-  if (currentQuestionIndex.value < numQuestions.value - 1) {
-    currentQuestionIndex.value++
-    activeQuestion.value = generateQuestion()
-  } else {
-    alert('🎉 You have completed all questions!')
-  }
-}
-
-function resetQuiz() {
-  correctnessLog.value = new Array(numQuestions.value).fill(undefined)
-  currentQuestionIndex.value = 0
-  activeQuestion.value = generateQuestion()
-}
 </script>
 
 <style>
@@ -148,12 +189,10 @@ function resetQuiz() {
   font-size: 2rem;
 }
 
-/* Icon colors */
 .fa-circle-check { color: limegreen; }
 .fa-minus-circle { color: orangered; }
 .fa-question-circle { color: grey; }
 
-/* Buttons */
 button {
   padding: 10px 20px;
   font-size: 1rem;
@@ -164,21 +203,24 @@ button {
   margin-top: 20px;
 }
 
-.submit-btn {
-  background-color: #3498db;
-  color: white;
+.submit-btn { background-color: #3498db; color: white; }
+.submit-btn:hover { background-color: #2980b9; }
+
+.next-btn { background-color: #f39c12; color: white; }
+.next-btn:hover { background-color: #d35400; }
+
+.reset-btn { background-color: #2ecc71; color: white; }
+.reset-btn:hover { background-color: #27ae60; }
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
 }
 
-.submit-btn:hover {
-  background-color: #2980b9;
-}
-
-.reset-btn {
-  background-color: #2ecc71;
-  color: white;
-}
-
-.reset-btn:hover {
-  background-color: #27ae60;
+.active-question-icon {
+  font-size: 1.8rem;
+  color: #1abc9c; /* teal */
+  animation: pulse 1.2s infinite ease-in-out;
 }
 </style>
