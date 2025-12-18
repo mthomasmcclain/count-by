@@ -67,7 +67,15 @@ const props = defineProps({
   showStateButton: Boolean
 })
 
-const runstate = reactive(await Agent.state(location.search))
+const problemId = window.location.href
+
+const runstate = reactive(await Agent.state('runstate-' + problemId))
+
+runstate.xapi = {
+  actor: problemId,
+  verb: 'initialized',
+  object: problemId
+}
 
 const showState = ref(false)
 
@@ -107,6 +115,15 @@ function nextQuestion() {
     runstate.activeQuestion = generateQuestion()
     runstate.questionLocked = false
   } else {
+    const allCorrect = runstate.activeQuestion.numberBoxes.every(item => !item.missing || Number(item.userInput) === item.value)
+
+    runstate.xapi = {
+      //  "actor" defaults to current user
+      verb: 'submitted',
+      object: problemId,
+      result: { success: allCorrect }
+    }
+
     runstate.isCompleted = true
   }
 }
@@ -118,6 +135,13 @@ function handleButtonClick() {
     runstate.correctnessLog[runstate.currentQuestionIndex] = allCorrect
     if (allCorrect) playCorrectSound()
     else playIncorrectSound()
+
+    runstate.xapi = {
+      //  "actor" defaults to current user
+      verb: 'progressed',
+      object: props.id
+    }
+
   } else if (!runstate.isCompleted) {
     nextQuestion()
   } else {
