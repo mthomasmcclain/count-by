@@ -6,10 +6,10 @@
         :key="`icon-for-item-${i}`"
         class="fas"
         :class="{
-          'fa-question-circle': val === undefined,
+          'fa-question-circle': val === null,
           'fa-circle-check': val === true,
           'fa-minus-circle': val === false,
-          'active-question-icon': val === undefined && i === runstate.currentQuestionIndex
+          'active-question-icon': val === null && i === runstate.currentQuestionIndex
         }"
       />
     </div>
@@ -94,7 +94,7 @@ function generateQuestion() {
 }
 
 function initialize() {
-  runstate.correctnessLog = new Array(props.numQuestions).fill(undefined)
+  runstate.correctnessLog = new Array(props.numQuestions).fill(null)
   runstate.currentQuestionIndex = 0
   runstate.activeQuestion = generateQuestion()
   runstate.questionLocked = false
