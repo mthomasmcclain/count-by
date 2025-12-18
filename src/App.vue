@@ -35,7 +35,7 @@
   }
 
   const params = new URLSearchParams(window.location.search)
-  const step = parseParam(params, 'countBy', DEFAULTS.step, 1)
+  const step = parseParam(params, 'step', DEFAULTS.step, 1)
   const min = parseParam(params, 'min', DEFAULTS.min)
   const max = parseParam(params, 'max', DEFAULTS.max, min.value)
   const sequenceLength = parseParam(params, 'sequenceLength', DEFAULTS.sequenceLength)
